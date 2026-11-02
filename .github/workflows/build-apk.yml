@@ -1,0 +1,29 @@
+name: Build SmartCarLock Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --platforms=android --org ir.smartcarlock --project-name smartcarlock .
+      - name: Internet permission and HTTPS-only network
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/><application android:usesCleartextTraffic="false"#' android/app/src/main/AndroidManifest.xml
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --release --dart-define=SCL_API_URL=https://api.smartcarlock.ir
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smartcarlock-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
